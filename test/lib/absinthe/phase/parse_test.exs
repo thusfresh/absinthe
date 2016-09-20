@@ -77,10 +77,57 @@ defmodule Absinthe.Phase.ParseTest do
     assert {:ok, _} = run(@query)
   end
 
-  def run(input) do
-    Absinthe.Phase.Parse.run(input)
+  @query ~S"""
+  mutation {
+    item(data: "{\"foo\": \"bar\"}") {
+      id
+      data
+    }
+  }
+  """
+  it "can parse escaped strings as inputs" do
+    assert {:ok, res} = run(@query)
+    path = [
+      Access.key(:definitions),
+      Access.at(0),
+      Access.key(:selection_set),
+      Access.key(:selections),
+      Access.at(0),
+      Access.key(:arguments),
+      Access.at(0),
+      Access.key(:value),
+      Access.key(:value)
+    ]
+    assert ~s({"foo": "bar"}) == get_in(res, path)
   end
 
 
+  @query ~S"""
+  mutation {
+    item(data: "foo\nbar") {
+      id
+      data
+    }
+  }
+  """
+  it "can parse include escaped characters as inputs" do
+    assert {:ok, res} = run(@query)
+    path = [
+      Access.key(:definitions),
+      Access.at(0),
+      Access.key(:selection_set),
+      Access.key(:selections),
+      Access.at(0),
+      Access.key(:arguments),
+      Access.at(0),
+      Access.key(:value),
+      Access.key(:value)
+    ]
+    assert ~s(foo\nbar) == get_in(res, path)
+  end
+
+  def run(input) do
+    Absinthe.Phase.Parse.run(input)
+  end
 
 end
