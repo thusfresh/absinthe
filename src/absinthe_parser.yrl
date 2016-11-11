@@ -268,14 +268,14 @@ extract_quoted_string_token({_Token, _Line, Value}) -> iolist_to_binary(unescape
 unescape(Escaped) -> unescape(Escaped, []).
 
 unescape([], Acc) -> lists:reverse(Acc);
-unescape([$\\, $" | T], Acc) -> unescape(T, [16#0022 | Acc]);
-unescape([$\\, $\\ | T], Acc) -> unescape(T, [16#005C | Acc]);
-unescape([$\\, $/ | T], Acc) -> unescape(T, [16#002F | Acc]);
-unescape([$\\, $b | T], Acc) -> unescape(T, [16#0008 | Acc]);
-unescape([$\\, $f | T], Acc) -> unescape(T, [16#000C | Acc]);
-unescape([$\\, $n | T], Acc) -> unescape(T, [16#000A | Acc]);
-unescape([$\\, $r | T], Acc) -> unescape(T, [16#000D | Acc]);
-unescape([$\\, $t | T], Acc) -> unescape(T, [16#0009 | Acc]);
+unescape([$\\, $" | T], Acc) -> unescape(T, [$" | Acc]);
+unescape([$\\, $\\ | T], Acc) -> unescape(T, [$\\ | Acc]);
+unescape([$\\, $/ | T], Acc) -> unescape(T, [$/ | Acc]);
+unescape([$\\, $b | T], Acc) -> unescape(T, [$\b | Acc]);
+unescape([$\\, $f | T], Acc) -> unescape(T, [$\f | Acc]);
+unescape([$\\, $n | T], Acc) -> unescape(T, [$\n | Acc]);
+unescape([$\\, $r | T], Acc) -> unescape(T, [$\r | Acc]);
+unescape([$\\, $t | T], Acc) -> unescape(T, [$\t | Acc]);
 unescape([$\\, $u, A, B, C, D | T], Acc) -> unescape(T, [hexlist_to_utf8_binary([A, B, C, D]) | Acc]);
 unescape([H | T], Acc) -> unescape(T, [H | Acc]).
 
