@@ -17,7 +17,7 @@ defmodule Absinthe.Phase.Document.Execution.Resolution do
   @spec run(Blueprint.t, Keyword.t) :: Phase.result_t
   def run(bp_root, options \\ []) do
     case Blueprint.current_operation(bp_root) do
-      nil -> bp_root
+      nil -> {:ok, bp_root}
       op -> resolve_current(bp_root, op, options)
     end
   end
@@ -278,8 +278,11 @@ defmodule Absinthe.Phase.Document.Execution.Resolution do
   def find_target_type(%{of_type: type}, schema) do
     find_target_type(type, schema)
   end
-  def find_target_type(schema_type, schema) do
+  def find_target_type(schema_type, schema) when is_atom(schema_type) or is_binary(schema_type) do
     schema.__absinthe_type__(schema_type)
+  end
+  def find_target_type(type, _schema) do
+    type
   end
 
   def error(node, message, extra \\ []) do
@@ -292,7 +295,7 @@ defmodule Absinthe.Phase.Document.Execution.Resolution do
   end
 
   @spec passes_type_condition?(Type.t, Type.t, any, Schema.t) :: boolean
-  defp passes_type_condition?(equal, equal, _, _), do: true
+  defp passes_type_condition?(%{name: name}, %{name: name}, _, _), do: true
   # The condition is an Object type and the current scope is a Union; Verify
   # that the Union has the Object type as a member and that the current source
   # object's concrete type matched the condition Object type.
@@ -329,11 +332,13 @@ defmodule Absinthe.Phase.Document.Execution.Resolution do
     false
   end
 
-  defp nil_value_error(_blueprint, _schema_type) do
+  defp nil_value_error(blueprint, _schema_type) do
     """
-    Tried to return nil value of field marked non null!
+    The field '#{blueprint.name}' resolved to nil, but it is marked non-null in your schema.
+    Please ensure that '#{blueprint.name}' always resolves to a non-null value.
 
-    TODO: More detailed error message
+    The corresponding Absinthe blueprint is:
+    #{inspect blueprint}
     """
   end
 end

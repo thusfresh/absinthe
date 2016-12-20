@@ -23,6 +23,21 @@ defmodule AbsintheTest do
     assert_result {:ok, %{data: %{"thing" => %{"name" => "Foo"}}}}, run(query, Things)
   end
 
+  it "can do a simple query with fragments" do
+    query = """
+    {
+      ... Fields
+    }
+
+    fragment Fields on RootQueryType {
+      thing(id: "foo") {
+        name
+      }
+    }
+    """
+    assert_result {:ok, %{data: %{"thing" => %{"name" => "Foo"}}}}, run(query, Things)
+  end
+
   it "can do a simple query with a weird alias" do
     query = """
     query GimmeFoo {
@@ -154,6 +169,22 @@ defmodule AbsintheTest do
     """
     result = run(query, Things, variables: %{"thingId" => "bar"})
     assert_result {:ok, %{data: %{"thing" => %{"name" => "Bar"}}}}, result
+  end
+
+  it "can handle variable errors without an operation name" do
+    query = """
+    query($userId: String, $test: String) {
+        user(id: $userId) {
+            id
+        }
+    }
+    """
+    assert_result {:ok,
+      %{errors: [
+        %{message: "Cannot query field \"user\" on type \"RootQueryType\". Did you mean \"number\"?"},
+        %{message: "Unknown argument \"id\" on field \"user\" of type \"RootQueryType\"."},
+        %{message: "Variable \"test\" is never used."}]}
+    }, run(query, Things, variables: %{"id" => "foo"})
   end
 
   it "can use input objects" do

@@ -488,10 +488,9 @@ defmodule Absinthe.Schema.Notation do
 
   ## Examples
   ```
-  scalar :time do
-    description "ISOz time"
-    parse &Timex.DateFormat.parse(&1, "{ISOz}")
-    serialize &Timex.DateFormat.format!(&1, "{ISOz}")
+  scalar :time, description: "ISOz time" do
+    parse &Timex.parse(&1.value, "{ISOz}")
+    serialize &Timex.format!(&1, "{ISOz}")
   end
   ```
   """
@@ -992,9 +991,11 @@ defmodule Absinthe.Schema.Notation do
   """
   defmacro import_types(type_module_ast) do
     env = __CALLER__
-    type_module_ast
-    |> Macro.expand(env)
-    |> do_import_types(env)
+    {:ok, _} =
+      type_module_ast
+      |> Macro.expand(env)
+      |> do_import_types(env)
+    :ok
   end
 
   defp do_import_types(type_module, env) when is_atom(type_module) do
