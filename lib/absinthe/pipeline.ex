@@ -70,7 +70,7 @@ defmodule Absinthe.Pipeline do
       # Process Arguments
       Phase.Document.Arguments.CoerceEnums,
       Phase.Document.Arguments.CoerceLists,
-      Phase.Document.Arguments.Parse,
+      {Phase.Document.Arguments.Parse, options},
       Phase.Document.MissingVariables,
       Phase.Document.MissingLiterals,
       Phase.Document.Arguments.FlagInvalid,
@@ -92,6 +92,9 @@ defmodule Absinthe.Pipeline do
       # Prepare for Execution
       Phase.Document.CascadeInvalid,
       Phase.Document.Flatten,
+      # Analyse Complexity
+      {Phase.Document.Complexity.Analysis, options},
+      {Phase.Document.Complexity.Result, options},
       # Execution
       {Phase.Document.Execution.Resolution, options},
       # Format Result

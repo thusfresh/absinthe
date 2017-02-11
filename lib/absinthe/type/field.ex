@@ -20,24 +20,63 @@ defmodule Absinthe.Type.Field do
 
   See the `Absinthe.Type.Field.t` explanation of `:resolve` for more information.
   """
-  @type resolver_t :: ((%{atom => any}, Absinthe.Resolution.t) -> resolver_output)
-  @type resolver_output :: ok_output | error_output | plugin_output
+  @type resolver_t :: ((%{atom => any}, Absinthe.Resolution.t) -> result)
 
-  @type ok_output :: {:ok, any}
-  @type error_output :: {:error, binary} | {:error, map | Keyword.t}
-  @type plugin_output :: {:plugin, Absinthe.Resolution.Plugin.t, term}
+  @typedoc """
+  The result of a resolver.
+  """
+  @type result :: ok_result | error_result | plugin_result
+
+  @typedoc """
+  A complexity function.
+
+  See the `Absinthe.Type.Field/t` explanation of `:complexity` for more
+  information.
+  """
+  @type complexity_t ::
+    ((%{atom => any}, non_neg_integer) -> non_neg_integer) |
+    ((%{atom => any}, non_neg_integer, Absinthe.Complexity.t) -> non_neg_integer) |
+    {module, atom} |
+    non_neg_integer
+
+  @type ok_result :: {:ok, any}
+  @type error_result :: {:error, error_value}
+  @type plugin_result :: {:plugin, Absinthe.Resolution.Plugin.t, term}
+
+  @typedoc """
+  An error message is a human-readable string describing the error that occurred.
+  """
+  @type error_message :: String.t
+
+  @typedoc """
+  Any serializable value.
+  """
+  @type serializable :: any
+
+  @typedoc """
+  A custom error may be a `map` or a `Keyword.t`, but must contain a `:message` key.
+
+  Note that the values that make up a custom error must be serializable.
+  """
+  @type custom_error :: %{required(:message) => error_message, optional(atom) => serializable} | Keyword.t
+
+  @typedoc """
+  An error value is a simple error message, a custom error, or a list of either/both of them.
+  """
+  @type error_value :: error_message | custom_error | [error_message | custom_error]
 
   @typedoc """
   The configuration for a field.
 
   * `:name` - The name of the field, usually assigned automatically by
-  the `Absinthe.Schema.Notation.field/1`.
+     the `Absinthe.Schema.Notation.field/1`.
   * `:description` - Description of a field, useful for introspection.
   * `:deprecation` - Deprecation information for a field, usually
      set-up using `Absinthe.Schema.Notation.deprecate/1`.
   * `:type` - The type the value of the field should resolve to
   * `:args` - The arguments of the field, usually created by using `Absinthe.Schema.Notation.arg/2`.
   * `:resolve` - The resolution function. See below for more information.
+  * `:complexity` - The complexity function. See below for more information.
   * `:default_value` - The default value of a field. Note this is not used during resolution; only fields that are part of an `Absinthe.Type.InputObject` should set this value.
 
   ## Resolution Functions
@@ -85,6 +124,63 @@ defmodule Absinthe.Type.Field do
      for the field (and useful for complex resolutions using the resolved source
      object, etc)
 
+  ## Complexity function
+
+  ### Default
+
+  If no complexity function is given, the default complexity function is used,
+  which is equivalent to:
+
+      fn(_, child_complexity) -> 1 + child_complexity end
+
+  ### Custom Complexity
+
+  When accepting arguments, however, you probably need do use them for
+  something. Here's an example of definining a field that looks up at most
+  `limit` users:
+  ```
+  query do
+    field :users, :person do
+      arg :limit, :integer
+
+      complexity fn %{limit: limit}, child_complexity ->
+        10 + limit * child_complexity
+      end
+    end
+  end
+  ```
+
+  An optional third argument, `Absinthe.Complexity` struct, provides extra
+  information. Here's an example of changing the complexity using the context:
+  ```
+  query do
+    field :users, :person do
+      arg :limit, :integer
+
+      complexity fn _, child_complexity, %{context: %{admin: admin?}} ->
+        if admin?, do: 0, else: 10 + limit * child_complexity
+      end
+    end
+  end
+  ```
+
+  Custom complexity functions are passed two or three arguments:
+
+  1. A map of the arguments for the field, filled in with values from the
+     provided query document/variables.
+  2. A non negative integer, which is total complexity of the child fields.
+  3. An `Absinthe.Complexity` struct with information about the context of the
+     field. This argument is optional when using an anonymous function.
+
+  Alternatively complexity can be an integer greater than or equal to 0:
+  ```
+  query do
+    field :users, :person do
+      complexity 10
+    end
+  end
+  ```
+
   """
   @type t :: %{name: binary,
                description: binary | nil,
@@ -93,10 +189,12 @@ defmodule Absinthe.Type.Field do
                default_value: any,
                args: %{(binary | atom) => Absinthe.Type.Argument.t} | nil,
                resolve: resolver_t | nil,
+               complexity: complexity_t | nil,
                __private__: Keyword.t,
                __reference__: Type.Reference.t}
 
-  defstruct name: nil, description: nil, type: nil, deprecation: nil, args: %{}, resolve: nil, default_value: nil, __private__: [], __reference__: nil
+  defstruct name: nil, description: nil, type: nil, deprecation: nil, args: %{},
+  resolve: nil, complexity: nil, default_value: nil, __private__: [], __reference__: nil
 
   @doc """
   Build an AST of the field map for inclusion in other types

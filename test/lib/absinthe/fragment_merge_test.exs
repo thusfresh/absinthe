@@ -78,4 +78,34 @@ defmodule Absinthe.FragmentMergeTest do
     ]}}
     assert {:ok, %{data: expected}} == Absinthe.run(doc, Schema)
   end
+
+  test "it deep merges fields properly different levels" do
+    doc = """
+    {
+      viewer {
+        ...fragmentWithOneField
+      }
+      ...fragmentWithOtherField
+    }
+
+    fragment fragmentWithOneField on User {
+      todos {
+        totalCount,
+      }
+    }
+
+    fragment fragmentWithOtherField on RootQueryType {
+      viewer {
+        todos {
+          completedCount
+        }
+      }
+    }
+    """
+    expected = %{"viewer" => %{"todos" => [
+      %{"totalCount" => 1, "completedCount" => 2},
+      %{"totalCount" => 3, "completedCount" => 4}
+    ]}}
+    assert {:ok, %{data: expected}} == Absinthe.run(doc, Schema)
+  end
 end
