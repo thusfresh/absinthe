@@ -1,4 +1,6 @@
 defmodule Absinthe.Resolution.Plugin.Batch do
+  require Logger
+
   @moduledoc """
   Batch the resolution of multiple fields.
 
@@ -122,7 +124,13 @@ defmodule Absinthe.Resolution.Plugin.Batch do
     end)
     |> Map.new(fn {batch_opts, task} ->
       timeout = Keyword.get(batch_opts, :timeout, 5_000)
-      Task.await(task, timeout)
+      try do
+        Task.await(task, timeout)
+      catch
+        {:timeout, _} = e ->
+          Logger.error "Batching timed out on #{inspect input}"
+          exit(e)
+      end
     end)
   end
 
