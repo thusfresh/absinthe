@@ -127,7 +127,7 @@ defmodule Absinthe.Resolution.Plugin.Batch do
       try do
         Task.await(task, timeout)
       catch
-        {:timeout, _} = e ->
+        :exit, {:timeout, _} = e ->
           Logger.error "Batching timed out on #{inspect input}"
           exit(e)
       end
